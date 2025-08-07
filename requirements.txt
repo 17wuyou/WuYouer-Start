@@ -1,27 +1,35 @@
-# requirements.txt
+# requirements.txt - v3: Solved for Google Colab environment compatibility
 
-# --- Core Machine Learning Libraries ---
+# --- Core Machine Learning Libraries (Project's Base) ---
+# Kept as is, no conflicts reported.
 torch==2.0.1
 torchvision==0.15.2
 torchaudio==2.0.2
 
-# --- Data Handling and Numerical Operations ---
+# --- Data Handling and Numerical Operations (Updated based on environment constraints) ---
+# numpy: Kept at 1.26.4 to satisfy jax (a dependency of tensorboard).
 numpy==1.26.4
-pandas==1.5.3
+# pandas: Upgraded to 2.2.2 to satisfy google-colab, xarray, etc.
+pandas==2.2.2
 
-# --- HDF5 Handling Libraries (Key Fix) ---
-# 修正了包名： 'tables' 是正确的，'pytables' 是错误的。
-# 使用一个被广泛验证的稳定版本组合。
+# --- HDF5 Handling Libraries (Updated based on environment constraints) ---
+# tables: Kept at 3.8.0, which is compatible.
 tables==3.8.0
-h5py==3.8.0
+# h5py: Upgraded to 3.11.0 to satisfy tensorflow.
+h5py==3.11.0
 
-# --- Configuration and Utilities ---
+# --- Configuration and Utilities (Updated based on environment constraints) ---
+# pyyaml: No conflicts reported.
 pyyaml==6.0
-tqdm==4.65.0
+# tqdm: Upgraded to 4.66.4 to satisfy datasets and dataproc.
+tqdm==4.66.4
 
-# --- Plotting and Visualization ---
-matplotlib==3.7.1
-tensorboard==2.13.0
+# --- Plotting and Visualization (Updated based on environment constraints) ---
+# matplotlib: Upgraded to 3.8.0 to satisfy arviz and plotnine.
+matplotlib==3.8.0
+# tensorboard: Upgraded to 2.19.0 to satisfy tensorflow.
+tensorboard==2.19.0
 
-# --- Optional but Recommended ---
-scikit-learn==1.2.2
+# --- Optional but Recommended (Updated based on environment constraints) ---
+# scikit-learn: Upgraded to 1.5.1 to satisfy cuml, mlxtend, etc.
+scikit-learn==1.5.1
