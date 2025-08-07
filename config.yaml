@@ -34,10 +34,6 @@ train:
   teacher_forcing_ratio: 0.5
   grad_norm_clip: 5.0
 
-  # --- 新增配置 ---
-  resume_training: false  # 设置为 true 来从断点继续训练
-  checkpoint_path: "checkpoints/latest_checkpoint.pth" # 最新断点的保存路径
-
 log:
   log_dir: "logs/"
   model_save_dir: "saved_models/"
