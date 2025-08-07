@@ -11,10 +11,9 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
-from pandas import read_hdf # 使用 pandas 加载数据
+from pandas import read_hdf
 
 from models import DCRNN
-# 注意：我们不再从utils导入load_sensor_data，因为逻辑已移入此文件
 from utils import (load_adj_matrix, calculate_diffusion_matrix,  
                    StandardScaler, generate_sliding_windows)
 
@@ -37,33 +36,18 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 def prepare_dataloaders(config):
-    # --- 核心修改区域开始 ---
-    # 加载HDF5文件为Pandas DataFrame
     if not os.path.exists(config['data']['sensor_data_path']):
         logging.error(f"Sensor data file not found at {config['data']['sensor_data_path']}")
         raise FileNotFoundError
     df = read_hdf(config['data']['sensor_data_path'])
-    
-    # 从DataFrame中提取纯数值，作为我们的基础数据
     sensor_data = df.values
-
-    # 特征工程: 使用DataFrame的索引来创建时间特征
-    # 修正: 从 df.index 获取时间信息，而不是 data.index
     time_ind = (df.index.values - df.index.values.astype("datetime64[D]")) / np.timedelta64(1, "D")
     time_of_day = np.tile(time_ind, [df.shape[1], 1]).transpose()
-    
-    # 将基础数据和时间特征拼接起来
-    # sensor_data shape: (num_samples, num_nodes) -> (num_samples, num_nodes, 1)
-    # time_of_day shape: (num_samples, num_nodes) -> (num_samples, num_nodes, 1)
-    # data shape: (num_samples, num_nodes, 2)
     data = np.concatenate(
         [sensor_data.reshape(-1, df.shape[1], 1), 
          time_of_day.reshape(-1, df.shape[1], 1)], 
         axis=-1
     )
-    # --- 核心修改区域结束 ---
-
-    # 划分数据集
     num_samples = data.shape[0]
     train_end = int(num_samples * config['data']['train_split'])
     val_end = train_end + int(num_samples * config['data']['val_split'])
@@ -72,18 +56,15 @@ def prepare_dataloaders(config):
     val_data = data[train_end:val_end]
     test_data = data[val_end:]
 
-    # 数据标准化 (只对第一个特征，即速度进行标准化)
     scaler = StandardScaler(mean=train_data[..., 0].mean(), std=train_data[..., 0].std())
     for category in [train_data, val_data, test_data]:
         category[..., 0] = scaler.transform(category[..., 0])
 
-    # 创建滑动窗口
     seq_len, horizon = config['train']['seq_len'], config['train']['horizon']
     x_train, y_train = generate_sliding_windows(train_data, seq_len, horizon)
     x_val, y_val = generate_sliding_windows(val_data, seq_len, horizon)
     x_test, y_test = generate_sliding_windows(test_data, seq_len, horizon)
     
-    # 转换为 PyTorch Tensors
     x_train = torch.from_numpy(x_train).float()
     y_train = torch.from_numpy(y_train).float()
     x_val = torch.from_numpy(x_val).float()
@@ -91,7 +72,6 @@ def prepare_dataloaders(config):
     x_test = torch.from_numpy(x_test).float()
     y_test = torch.from_numpy(y_test).float()
 
-    # 创建 DataLoader
     batch_size = config['train']['batch_size']
     train_dataset = TensorDataset(x_train, y_train)
     val_dataset = TensorDataset(x_val, y_val)
@@ -109,9 +89,15 @@ def train_epoch(model, dataloader, optimizer, loss_fn, device, config):
     for x_batch, y_batch in tqdm(dataloader, desc="Training"):
         x_batch, y_batch = x_batch.to(device), y_batch.to(device)
         optimizer.zero_grad()
-        output = model(x_batch, y_batch)
         
-        loss = loss_fn(output, y_batch[..., :config['model']['out_features']])
+        # --- 核心修复 ---
+        # 只将需要预测的目标特征传递给模型进行Teacher Forcing
+        # y_batch_targets 的特征维度将是 config['model']['out_features'] (即 1)
+        y_batch_targets = y_batch[..., :config['model']['out_features']]
+        output = model(x_batch, y_batch_targets)
+        # --- 修复结束 ---
+        
+        loss = loss_fn(output, y_batch_targets)
         loss.backward()
         
         torch.nn.utils.clip_grad_norm_(model.parameters(), config['train']['grad_norm_clip'])
@@ -125,8 +111,10 @@ def validate_epoch(model, dataloader, loss_fn, device, config):
     with torch.no_grad():
         for x_batch, y_batch in tqdm(dataloader, desc="Validating"):
             x_batch, y_batch = x_batch.to(device), y_batch.to(device)
-            output = model(x_batch)
-            loss = loss_fn(output, y_batch[..., :config['model']['out_features']])
+            output = model(x_batch) # 验证时，不提供targets
+            
+            y_batch_targets = y_batch[..., :config['model']['out_features']]
+            loss = loss_fn(output, y_batch_targets)
             total_loss += loss.item()
     return total_loss / len(dataloader)
 
