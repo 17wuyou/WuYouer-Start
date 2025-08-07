@@ -1,0 +1,23 @@
+# requirements.txt
+
+# --- Core Machine Learning Libraries ---
+# PyTorch is the main deep learning framework used for the model
+torch==2.0.1
+torchvision==0.15.2
+torchaudio==2.0.2
+
+# --- Data Handling and Numerical Operations ---
+# NumPy is essential for numerical operations, especially for the adjacency matrix
+numpy==1.23.5
+# Pandas is commonly used for loading and handling structured data (e.g., sensor readings from CSV)
+pandas==1.5.3
+
+# --- Configuration and Utilities ---
+# PyYAML is used to parse the YAML configuration file (config.yaml)
+pyyaml==6.0
+# TQDM provides clean and smart progress bars for training loops
+tqdm==4.65.0
+
+# --- Optional but Recommended ---
+# Scikit-learn can be useful for data scaling (e.g., StandardScaler) and metrics
+scikit-learn==1.2.2
