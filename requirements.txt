@@ -6,18 +6,17 @@ torchvision==0.15.2
 torchaudio==2.0.2
 
 # --- Data Handling and Numerical Operations ---
-# 升级 NumPy 版本以解决 jax 的依赖问题
-numpy==1.26.4
+numpy==1.23.5
 pandas==1.5.3
-tables==3.8.0
+tables==3.8.0 # pandas读取HDF5需要
 
 # --- Configuration and Utilities ---
 pyyaml==6.0
 tqdm==4.65.0
 
-# --- Plotting and Visualization ---
+# --- Plotting and Visualization (New) ---
 matplotlib==3.7.1
-tensorboard==2.13.0
 
 # --- Optional but Recommended ---
 scikit-learn==1.2.2
+tensorboard==2.13.0 # 用于生成 events 文件
