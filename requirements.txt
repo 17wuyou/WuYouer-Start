@@ -1,4 +1,5 @@
-# requirements.txt - v6: Final Lock for Protobuf
+# requirements.txt - v5: Algorithmically solved for environment compatibility
+
 
 # --- Core ML Libraries ---
 torch==2.0.1
@@ -23,7 +24,3 @@ tensorboard==2.19.0
 
 # --- Machine Learning / Stats ---
 scikit-learn==1.6.0
-
-# --- Dependency of Dependencies (Lock for Stability) ---
-# Lock protobuf to a version compatible with tensorflow and others
-protobuf==4.25.3
