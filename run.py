@@ -2,6 +2,7 @@
 
 import os
 import argparse
+import sys
 import yaml
 import logging
 import random
@@ -10,9 +11,11 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
+from pandas import read_hdf # 使用 pandas 加载数据
 
 from models import DCRNN
-from utils import (load_adj_matrix, calculate_diffusion_matrix, load_sensor_data, 
+# 注意：我们不再从utils导入load_sensor_data，因为逻辑已移入此文件
+from utils import (load_adj_matrix, calculate_diffusion_matrix,  
                    StandardScaler, generate_sliding_windows)
 
 
@@ -34,14 +37,31 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 def prepare_dataloaders(config):
-    # 加载时序数据
-    data = load_sensor_data(config['data']['sensor_data_path'])
+    # --- 核心修改区域开始 ---
+    # 加载HDF5文件为Pandas DataFrame
+    if not os.path.exists(config['data']['sensor_data_path']):
+        logging.error(f"Sensor data file not found at {config['data']['sensor_data_path']}")
+        raise FileNotFoundError
+    df = read_hdf(config['data']['sensor_data_path'])
     
-    # 特征工程 (示例: 仅使用速度和一天中的时刻)
-    # data[:, :, 0] 是速度
-    time_ind = (data.index.values - data.index.values.astype("datetime64[D]")) / np.timedelta64(1, "D")
-    time_of_day = np.tile(time_ind, [1, 207, 1]).transpose((2, 1, 0))
-    data = np.concatenate([data.reshape(-1, 207, 1), time_of_day], axis=-1)
+    # 从DataFrame中提取纯数值，作为我们的基础数据
+    sensor_data = df.values
+
+    # 特征工程: 使用DataFrame的索引来创建时间特征
+    # 修正: 从 df.index 获取时间信息，而不是 data.index
+    time_ind = (df.index.values - df.index.values.astype("datetime64[D]")) / np.timedelta64(1, "D")
+    time_of_day = np.tile(time_ind, [df.shape[1], 1]).transpose()
+    
+    # 将基础数据和时间特征拼接起来
+    # sensor_data shape: (num_samples, num_nodes) -> (num_samples, num_nodes, 1)
+    # time_of_day shape: (num_samples, num_nodes) -> (num_samples, num_nodes, 1)
+    # data shape: (num_samples, num_nodes, 2)
+    data = np.concatenate(
+        [sensor_data.reshape(-1, df.shape[1], 1), 
+         time_of_day.reshape(-1, df.shape[1], 1)], 
+        axis=-1
+    )
+    # --- 核心修改区域结束 ---
 
     # 划分数据集
     num_samples = data.shape[0]
@@ -52,7 +72,7 @@ def prepare_dataloaders(config):
     val_data = data[train_end:val_end]
     test_data = data[val_end:]
 
-    # 数据标准化
+    # 数据标准化 (只对第一个特征，即速度进行标准化)
     scaler = StandardScaler(mean=train_data[..., 0].mean(), std=train_data[..., 0].std())
     for category in [train_data, val_data, test_data]:
         category[..., 0] = scaler.transform(category[..., 0])
@@ -91,7 +111,6 @@ def train_epoch(model, dataloader, optimizer, loss_fn, device, config):
         optimizer.zero_grad()
         output = model(x_batch, y_batch)
         
-        # 我们只预测第一个特征 (速度)
         loss = loss_fn(output, y_batch[..., :config['model']['out_features']])
         loss.backward()
         
@@ -106,7 +125,7 @@ def validate_epoch(model, dataloader, loss_fn, device, config):
     with torch.no_grad():
         for x_batch, y_batch in tqdm(dataloader, desc="Validating"):
             x_batch, y_batch = x_batch.to(device), y_batch.to(device)
-            output = model(x_batch) # 不使用 Teacher Forcing
+            output = model(x_batch)
             loss = loss_fn(output, y_batch[..., :config['model']['out_features']])
             total_loss += loss.item()
     return total_loss / len(dataloader)
@@ -120,14 +139,18 @@ def main(config_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"Using device: {device}")
 
-    adj_matrix = load_adj_matrix(config['data']['adj_path'])
+    try:
+        adj_matrix = load_adj_matrix(config['data']['adj_path'])
+        train_loader, val_loader, _, scaler = prepare_dataloaders(config)
+    except FileNotFoundError:
+        logging.error("Failed to load data, please check file paths in config.yaml and data folder structure.")
+        sys.exit(1)
+
     diffusion_matrices = calculate_diffusion_matrix(adj_matrix, config['model']['num_diffusion_steps'])
-    
-    train_loader, val_loader, _, scaler = prepare_dataloaders(config)
     
     model = DCRNN(config, diffusion_matrices).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=config['train']['learning_rate'])
-    loss_fn = nn.L1Loss() # MAE Loss
+    loss_fn = nn.L1Loss()
 
     best_val_loss = float('inf')
     patience_counter = 0

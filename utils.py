@@ -3,12 +3,14 @@
 import os
 import pickle
 import logging
-import h5py
 import numpy as np
 import torch
 
 def load_adj_matrix(filepath):
     """从 .pkl 文件加载邻接矩阵"""
+    if not os.path.exists(filepath):
+        logging.error(f"Adjacency matrix file not found at {filepath}")
+        raise FileNotFoundError(f"Adjacency matrix file not found at {filepath}")
     try:
         with open(filepath, 'rb') as f:
             sensor_info = pickle.load(f, encoding='latin1')
@@ -38,12 +40,6 @@ def calculate_diffusion_matrix(adj_mx, num_diffusion_steps):
         
     return diffusion_matrices
 
-def load_sensor_data(filepath):
-    """加载 HDF5 格式的传感器数据"""
-    with h5py.File(filepath, 'r') as f:
-        data = f['df']['block0_values'][:]
-    return data
-
 class StandardScaler:
     """标准差标准化器"""
     def __init__(self, mean, std):
@@ -59,12 +55,6 @@ class StandardScaler:
 def generate_sliding_windows(data, seq_len, horizon):
     """
     为 Seq2Seq 模型生成滑动窗口数据对
-    :param data: (num_samples, num_nodes, num_features)
-    :param seq_len: 输入序列长度
-    :param horizon: 预测序列长度
-    :return: (X, Y)
-        X: (num_samples, seq_len, num_nodes, num_features)
-        Y: (num_samples, horizon, num_nodes, num_features)
     """
     num_samples, num_nodes, num_features = data.shape
     total_len = seq_len + horizon
