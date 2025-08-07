@@ -10,9 +10,10 @@ numpy==1.26.4
 pandas==1.5.3
 
 # --- HDF5 Handling Libraries (Key Fix) ---
-# 固定到已知稳定的版本以解决HDF5ExtError
-pytables==3.8.0
-h5py==3.9.0
+# 修正了包名： 'tables' 是正确的，'pytables' 是错误的。
+# 使用一个被广泛验证的稳定版本组合。
+tables==3.8.0
+h5py==3.8.0
 
 # --- Configuration and Utilities ---
 pyyaml==6.0
