@@ -1,29 +1,46 @@
-# requirements.txt - v6: Final Lock for Protobuf
+<<<<<<< HEAD
+<<<<<<< HEAD
+# requirements.txt
+=======
+# requirements.txt - v5: Algorithmically solved for environment compatibility
+=======
+# requirements.txt - v5: Algorithmically solved for environment compatibility
 
-# --- Core ML Libraries ---
+>>>>>>> parent of 464947f (手动实现文件格式转换)
+
+>>>>>>> parent of 464947f (手动实现文件格式转换)
+
+# --- Core Machine Learning Libraries ---
 torch==2.0.1
 torchvision==0.15.2
 torchaudio==2.0.2
 
-# --- Data Handling & Numerical Operations ---
+# --- Data Handling and Numerical Operations ---
 numpy==1.26.4
-pandas==2.2.2
+pandas==1.5.3
 
-# --- HDF5 Handling Libraries ---
+# --- HDF5 Handling Libraries (Key Fix) ---
+# 修正了包名： 'tables' 是正确的，'pytables' 是错误的。
+# 使用一个被广泛验证的稳定版本组合。
 tables==3.8.0
-h5py==3.11.0
+h5py==3.8.0
 
 # --- Configuration and Utilities ---
 pyyaml==6.0
-tqdm==4.67.0
+tqdm==4.65.0
 
 # --- Plotting and Visualization ---
-matplotlib==3.8.0
-tensorboard==2.19.0
+matplotlib==3.7.1
+tensorboard==2.13.0
 
+<<<<<<< HEAD
+# --- Optional but Recommended ---
+scikit-learn==1.2.2
+=======
 # --- Machine Learning / Stats ---
+<<<<<<< HEAD
 scikit-learn==1.6.0
-
-# --- Dependency of Dependencies (Lock for Stability) ---
-# Lock protobuf to a version compatible with tensorflow and others
-protobuf==4.25.3
+>>>>>>> parent of 464947f (手动实现文件格式转换)
+=======
+scikit-learn==1.6.0
+>>>>>>> parent of 464947f (手动实现文件格式转换)
